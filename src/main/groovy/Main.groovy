@@ -10,8 +10,8 @@ import com.webcerebrium.binance.datatype.BinanceSymbol
  * Created by gcretu on 12/10/17.
  */
 class Main {
-  String apiKey = '---'
-  String secret = '---'
+  String apiKey = '___'
+  String secret = '___'
   String binanceSymbol = 'TRXETH'
   int iterationIndex = 0
   BinanceApi binanceApi
@@ -125,13 +125,24 @@ class Main {
   }
 
   private boolean shouldUpdateSellOrder(BinanceOrder order, double currentMaxPrice) {
+    BinanceOrder previousBuyOrder = getPreviousBuyOrder(getBinanceSymbol())
+    double currentSellTotalEthAmount = order.origQty * currentMaxPrice
+    double previousBuyTotalEthAmount = order.origQty * previousBuyOrder.price
+    double buySellPriceDifference = currentSellTotalEthAmount - previousBuyTotalEthAmount
+    double minProfit = previousBuyTotalEthAmount / 100
     println 'current sell order : ' + order
-    order.price.doubleValue() != currentMaxPrice
+    order.price.doubleValue() < currentMaxPrice && buySellPriceDifference > 0 && buySellPriceDifference > minProfit
   }
 
   private boolean shouldUpdateBuyOrder(BinanceOrder order, double currentMinPrice) {
+    BinanceOrder previousSellOrder = getPreviousSellOrder(getBinanceSymbol())
+    double currentBuyTotalEthAmount = ((int) order.origQty / currentMinPrice) * currentMinPrice
+    double previousSellTotalEthAmount = previousSellOrder.price * previousSellOrder.origQty
+    double buySellPriceDifference = previousSellTotalEthAmount - currentBuyTotalEthAmount
+    double minProfit = previousSellTotalEthAmount / 100
+
     println 'current buy order : ' + order
-    order.price.doubleValue() > currentMinPrice
+    order.price.doubleValue() > currentMinPrice && buySellPriceDifference > 0 && buySellPriceDifference > minProfit
   }
 
   private boolean shouldSellCoin(double coinAmount, double currentMaxPrice) {
@@ -203,7 +214,7 @@ class Main {
       //place sell order using the available balance
       String tradeSellCurrency = 'TRX'
       double tradeSellCurrencyQuantity = getCoinAmount(priceFreeMap, tradeSellCurrency)
-      if (shouldSellCoin(tradeSellCurrencyQuantity)) {
+      if (shouldSellCoin(tradeSellCurrencyQuantity, maxPrice)) {
         placeSellOrder(maxPrice, (int) tradeSellCurrencyQuantity, getBinanceSymbol())
       }
 
